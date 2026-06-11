@@ -97,7 +97,7 @@ void ManagerNode::configPubSub() {
     std::string topic_name = "/" + uav + "/" + _topic_odom_;
 
     int index = neighbors_states_.size();
-
+    
     neighbors_states_.push_back(laser_msgs::msg::NeighborOdom());
 
     auto sub = this->create_subscription<nav_msgs::msg::Odometry>(

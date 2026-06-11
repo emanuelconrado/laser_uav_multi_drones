@@ -34,7 +34,7 @@ def generate_launch_description():
     manager_node_file = LaunchConfiguration('multi_drone_state_file')
 
     manager_node_lifecycle_node = LifecycleNode(
-        package='multi_drones_state',
+        package='multi_drone_state',
         executable='manager_node',
         name='manager_node',
         namespace=uav_name,
