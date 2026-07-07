@@ -44,7 +44,8 @@ def generate_launch_description():
             {'this_uav_name': uav_name}
         ],
         remappings=[
-            ('neighbor_odom_out', '/' + uav_name + '/neighbor_odom')
+            ('neighbor_odom_out', '/' + uav_name + '/neighbor_velocity_position'),
+            ('odometry_in', '/' + uav_name + '/ground_truth')
         ]
     )
 

@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    uavs_names: ["uav1", "uav2", "uav3", "uav4"]
-    topic_odom: "ground_truth" 
+    uavs_names: ["uav1", "uav2", "uav3"]
+    topic_odom: "ground_truth" #all uav odom have to be in the same frame_id 
     rate:
       timer_manager: 7.0

@@ -37,7 +37,7 @@ CallbackReturn ManagerNode::on_configure(const rclcpp_lifecycle::State &) {
 CallbackReturn ManagerNode::on_activate([[maybe_unused]] const rclcpp_lifecycle::State &state) {
   RCLCPP_INFO(get_logger(), "Activating");
 
-  pub_neighbor_odom_->on_activate();
+  pub_neighbor_position_velocity_->on_activate();
   is_active_ = true;
 
   return CallbackReturn::SUCCESS;
@@ -48,7 +48,7 @@ CallbackReturn ManagerNode::on_activate([[maybe_unused]] const rclcpp_lifecycle:
 CallbackReturn ManagerNode::on_deactivate([[maybe_unused]] const rclcpp_lifecycle::State &state) {
   RCLCPP_INFO(get_logger(), "Deactivating");
 
-  pub_neighbor_odom_->on_deactivate();
+  pub_neighbor_position_velocity_->on_deactivate();
 
   return CallbackReturn::SUCCESS;
 }
@@ -97,20 +97,21 @@ void ManagerNode::configPubSub() {
     std::string topic_name = "/" + uav + "/" + _topic_odom_;
 
     int index = neighbors_states_.size();
-    
+
     neighbors_states_.push_back(laser_msgs::msg::NeighborOdom());
 
     auto sub = this->create_subscription<nav_msgs::msg::Odometry>(
         topic_name, 1, [this, index](const nav_msgs::msg::Odometry::SharedPtr msg) { this->subNeighborOdom(msg, index); });
 
-    subs_neighbors_odom_.push_back(sub);
+    subs_neighbors_position_velocity_.push_back(sub);
   }
 
   if (!is_this_uav_in_neighbor_) {
     RCLCPP_ERROR(this->get_logger(), "UAV name %s is not in the list of all UAVs.", _this_uav_name_.c_str());
   }
 
-  pub_neighbor_odom_ = create_publisher<laser_msgs::msg::NeighborOdomArray>("neighbor_odom_out", 1);
+  sub_odometry_ = create_subscription<nav_msgs::msg::Odometry>("odometry_in", 1, std::bind(&ManagerNode::subOdometry, this, std::placeholders::_1));
+  pub_neighbor_position_velocity_ = create_publisher<laser_msgs::msg::NeighborOdomArray>("neighbor_odom_out", 1);
 }
 //}
 
@@ -134,14 +135,45 @@ void ManagerNode::configServices() {
 }
 //}
 
+/* subOdometryGps() //{ */
+void ManagerNode::subOdometry(const nav_msgs::msg::Odometry &msg) {
+  if (!is_active_) {
+    return;
+  }
+
+  odometry_ = msg;
+}
+//}
+
 /* tmrManager() //{ */
 void ManagerNode::tmrManager() {
   if (!is_active_) {
     return;
   }
 
-  if (first_odom_received_)
-    pub_neighbor_odom_->publish(neighbor_odom_);
+  if (!first_odom_received_) {
+    return;
+  }
+
+  {
+    std::scoped_lock lock(mutex_neighbors_copy_);
+    neighbors_states_aux = neighbors_states_;
+  }
+
+  std::sort(neighbors_states_aux.begin(), neighbors_states_aux.end(), [](const auto &a, const auto &b) {
+    Eigen::Vector3d pos_a(a.pose.position.x, a.pose.position.y, a.pose.position.z);
+
+    Eigen::Vector3d pos_b(b.pose.position.x, b.pose.position.y, b.pose.position.z);
+
+    return pos_a.squaredNorm() < pos_b.squaredNorm();
+  });
+
+  if (neighbors_states_aux.size() > 5)
+    neighbors_states_aux.resize(5);
+
+  neighbor_position_velocity_.array = std::move(neighbors_states_aux);
+
+  pub_neighbor_position_velocity_->publish(neighbor_position_velocity_);
 }
 //}
 
@@ -151,11 +183,26 @@ void ManagerNode::subNeighborOdom(const nav_msgs::msg::Odometry::SharedPtr msg, 
     first_odom_received_ = true;
   }
 
-  neighbors_states_[index].pose = msg->pose.pose;
-  neighbors_states_[index].twist    = msg->twist.twist;
+  neighbors_states_[index].child_frame_id  = _this_uav_name_ + "/fcu";
+  neighbors_states_[index].header.frame_id = _this_uav_name_ + "/fcu";
+  neighbors_states_[index].header.stamp    = msg->header.stamp;
 
+  Eigen::Vector3d this_uav_position(odometry_.pose.pose.position.x, odometry_.pose.pose.position.y, odometry_.pose.pose.position.z);
+  Eigen::Vector3d neighbor_position(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
 
-  neighbor_odom_.array = neighbors_states_;
+  Eigen::Vector3d this_uav_velocity(odometry_.twist.twist.linear.x, odometry_.twist.twist.linear.y, odometry_.twist.twist.linear.z);
+  Eigen::Vector3d neighbor_velocity(msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z);
+
+  Eigen::Vector3d relative_position = neighbor_position - this_uav_position;
+  Eigen::Vector3d relative_velocity = this_uav_velocity - neighbor_velocity;
+
+  neighbors_states_[index].pose.position.x = relative_position.x();
+  neighbors_states_[index].pose.position.y = relative_position.y();
+  neighbors_states_[index].pose.position.z = relative_position.z();
+
+  neighbors_states_[index].twist.linear.x = relative_velocity.x();
+  neighbors_states_[index].twist.linear.y = relative_velocity.y();
+  neighbors_states_[index].twist.linear.z = relative_velocity.z();
 }
 //}
 

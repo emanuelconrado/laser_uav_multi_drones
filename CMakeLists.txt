@@ -22,6 +22,7 @@ find_package(std_srvs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(laser_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
 # Pacote para transformações de coordenadas no ROS2
 
 
@@ -36,6 +37,7 @@ std_srvs
 tf2
 tf2_geometry_msgs
 laser_msgs
+Eigen3
 )
 
 include_directories(
