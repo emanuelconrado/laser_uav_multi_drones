@@ -1,37 +1,14 @@
 #ifndef MANAGER_NODE_CPP__MANAGER_NODE_HPP
 #define MANAGER_NODE_CPP__MANAGER_NODE_HPP
 
-#include <memory>
-#include <mutex>
-#include <string>
-#include <chrono>
-#include <thread>
-#include <algorithm>
-
-#include <set>
-
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
 #include <Eigen/Dense>
 
-#include <laser_msgs/msg/point_with_string.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <std_msgs/msg/bool.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/pose.hpp>
-#include <std_srvs/srv/trigger.hpp>
-#include <laser_msgs/msg/pose_with_heading.hpp>
-#include <laser_msgs/msg/trajectory_path.hpp>
-#include <laser_msgs/msg/uav_control_diagnostics.hpp>
-#include <laser_msgs/msg/point_with_string_array_stamped.hpp>
 #include <laser_msgs/msg/neighbor_odom_array.hpp>
 #include <laser_msgs/msg/neighbor_odom.hpp>
-
-using namespace std::chrono;
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 

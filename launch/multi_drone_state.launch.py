@@ -9,6 +9,8 @@ from launch.actions import RegisterEventHandler, EmitEvent
 from launch_ros.actions import LifecycleNode
 from launch_ros.substitutions import FindPackageShare
 
+from launch.substitutions import PythonExpression
+
 from launch.events import matches_action
 from launch.event_handlers.on_process_start import OnProcessStart
 from launch_ros.event_handlers import OnStateTransition
@@ -30,6 +32,14 @@ def generate_launch_description():
         )
     )
 
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value=PythonExpression(['"', os.getenv('REAL_UAV', "true"), '" == "false"']),
+            description='Whether use the simulation time.'
+        )
+    )
+    
     #Initialize arguments
     manager_node_file = LaunchConfiguration('multi_drone_state_file')
 
@@ -41,7 +51,7 @@ def generate_launch_description():
         output='screen',
         parameters=[
             manager_node_file,
-            {'this_uav_name': uav_name}
+            {'this_uav_name': uav_name}, {'use_sim_time': LaunchConfiguration('use_sim_time')}
         ],
         remappings=[
             ('neighbor_odom_out', '/' + uav_name + '/neighbor_velocity_position'),

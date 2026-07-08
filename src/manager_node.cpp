@@ -8,9 +8,9 @@ ManagerNode::ManagerNode(const rclcpp::NodeOptions &options) : rclcpp_lifecycle:
   RCLCPP_INFO(get_logger(), "Creating");
 
   declare_parameter("rate.timer_manager", rclcpp::ParameterValue(1.0));
-  declare_parameter("uavs_names", std::vector<std::string>{"uav1"});
-  declare_parameter("topic_odom", std::string{"ground_truth"});
-  declare_parameter("this_uav_name", std::string{"uav1"});
+  declare_parameter("uavs_names", std::vector<std::string>{"undefined"});
+  declare_parameter("topic_odom", std::string{"undefined"});
+  declare_parameter("this_uav_name", std::string{"undefined"});
 }
 //}
 
@@ -93,7 +93,7 @@ void ManagerNode::configPubSub() {
       continue;
     }
 
-    std::cout << "UAV: " << uav << std::endl;
+    std::cout << "UAV Neighbor: " << uav << std::endl;
     std::string topic_name = "/" + uav + "/" + _topic_odom_;
 
     int index = neighbors_states_.size();
@@ -160,6 +160,23 @@ void ManagerNode::tmrManager() {
     neighbors_states_aux = neighbors_states_;
   }
 
+  int index = 0;
+
+  for (const auto &uav : _uavs_names_) {
+    if (uav == _this_uav_name_) {
+      is_this_uav_in_neighbor_ = true;
+      continue;
+    }
+
+    const double latency = (this->now() - rclcpp::Time(neighbors_states_aux[index].header.stamp)).seconds();
+
+    if (latency > 1.0) {
+      RCLCPP_WARN(get_logger(), "%s odom latency is greater than 1 s: %.3f s", uav.c_str(), latency);
+    }
+
+    ++index;
+  }
+
   std::sort(neighbors_states_aux.begin(), neighbors_states_aux.end(), [](const auto &a, const auto &b) {
     Eigen::Vector3d pos_a(a.pose.position.x, a.pose.position.y, a.pose.position.z);
 
@@ -167,6 +184,7 @@ void ManagerNode::tmrManager() {
 
     return pos_a.squaredNorm() < pos_b.squaredNorm();
   });
+
 
   if (neighbors_states_aux.size() > 5)
     neighbors_states_aux.resize(5);
