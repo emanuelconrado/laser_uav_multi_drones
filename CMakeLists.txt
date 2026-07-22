@@ -21,67 +21,40 @@ find_package(laser_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 # Pacote para transformações de coordenadas no ROS2
 
+set(dependencies rclcpp rclcpp_lifecycle rclcpp_components nav_msgs laser_msgs
+                 Eigen3)
 
-set(dependencies
-rclcpp 
-rclcpp_lifecycle 
-rclcpp_components
-nav_msgs
-laser_msgs
-Eigen3
-)
-
-include_directories(
-  include
-)
+include_directories(include)
 
 set(executable_name manager_node)
 
-add_executable(${executable_name}
-  src/manager_node_main.cpp
-)
+add_executable(${executable_name} src/manager_node_main.cpp)
 
 set(library_name manager_node_core)
 
-add_library(${library_name} SHARED
-  src/manager_node.cpp
-)
+add_library(${library_name} SHARED src/manager_node.cpp)
 
-ament_target_dependencies(${executable_name}
-  ${dependencies}
-)
+ament_target_dependencies(${executable_name} ${dependencies})
 
-target_link_libraries(${executable_name}
-  ${library_name}
-)
+target_link_libraries(${executable_name} ${library_name})
 
-ament_target_dependencies(${library_name}
-  ${dependencies}
-)
+ament_target_dependencies(${library_name} ${dependencies})
 
 target_include_directories(${library_name} PRIVATE src/include)
 
 rclcpp_components_register_nodes(${library_name} "::ManagerNode")
 
-install(TARGETS ${library_name}
+install(
+  TARGETS ${library_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
+  RUNTIME DESTINATION bin)
 
-install(TARGETS ${executable_name}
-  RUNTIME DESTINATION lib/${PROJECT_NAME}
-)
+install(TARGETS ${executable_name} RUNTIME DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY include/
-  DESTINATION include/
-)
+install(DIRECTORY include/ DESTINATION include/)
 
-install(DIRECTORY
-  launch
-  params
-  DESTINATION share/${PROJECT_NAME}
-)
+install(DIRECTORY launch params DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
