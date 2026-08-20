@@ -3,7 +3,7 @@ import os
 import lifecycle_msgs.msg
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, EmitEvent, RegisterEventHandler
-from launch.event_handlers.on_process_start import OnProcessStart
+from launch.event_handlers import OnProcessStart
 from launch.events import matches_action
 from launch.substitutions import (
     LaunchConfiguration,
@@ -19,14 +19,20 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     # Declare arguments
     declared_arguments = []
+
     uav_name = os.environ["UAV_NAME"]
+
     declared_arguments.append(
         DeclareLaunchArgument(
-            "multi_drone_state_file",
+            "payload_transport_file",
             default_value=PathJoinSubstitution(
-                [FindPackageShare("multi_drone_state"), "params", "params.yaml"]
+                [
+                    FindPackageShare("laser_uav_multi_drones"),
+                    "params",
+                    "payload_transport.yaml",
+                ]
             ),
-            description="Full path to the file with the all parameters.",
+            description="Full path to the payload transport parameter file.",
         )
     )
 
@@ -36,81 +42,101 @@ def generate_launch_description():
             default_value=PythonExpression(
                 ['"', os.getenv("REAL_UAV", "true"), '" == "false"']
             ),
-            description="Whether use the simulation time.",
+            description="Whether to use simulation time.",
         )
     )
 
     # Initialize arguments
-    manager_node_file = LaunchConfiguration("multi_drone_state_file")
+    payload_transport_file = LaunchConfiguration("payload_transport_file")
+    use_sim_time = LaunchConfiguration("use_sim_time")
 
-    manager_node_lifecycle_node = LifecycleNode(
-        package="multi_drone_state",
-        executable="manager_node",
-        name="manager_node",
+    # Payload transport lifecycle node
+    payload_transport_node = LifecycleNode(
+        package="laser_uav_multi_drones",
+        executable="payload_transport_node",
+        name="payload_transport",
         namespace=uav_name,
         output="screen",
         parameters=[
-            manager_node_file,
+            payload_transport_file,
             {"this_uav_name": uav_name},
-            {"use_sim_time": LaunchConfiguration("use_sim_time")},
+            {"use_sim_time": use_sim_time},
         ],
         remappings=[
-            ("neighbor_odom_out", "/" + uav_name + "/neighbor_velocity_position"),
-            ("odometry_in", "/" + uav_name + "/ground_truth"),
+            (
+                "neighbor_odom_out",
+                "/" + uav_name + "/neighbor_velocity_position",
+            ),
+            (
+                "odometry_in",
+                "/" + uav_name + "/ground_truth",
+            ),
+            (
+                "odometry_payload_in",
+                "/payload/ground_truth",
+            ),
         ],
     )
 
+    # Lifecycle event handlers
     event_handlers = []
 
+    # Configure node after process starts
     event_handlers.append(
-        # Right after the node starts, make it take the 'configure' transition.
         RegisterEventHandler(
             OnProcessStart(
-                target_action=manager_node_lifecycle_node,
+                target_action=payload_transport_node,
                 on_start=[
                     EmitEvent(
                         event=ChangeState(
                             lifecycle_node_matcher=matches_action(
-                                manager_node_lifecycle_node
+                                payload_transport_node
                             ),
-                            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_CONFIGURE,
+                            transition_id=(
+                                lifecycle_msgs.msg.Transition.
+                                TRANSITION_CONFIGURE
+                            ),
                         )
                     ),
                 ],
             )
-        ),
+        )
     )
 
+    # Activate node after successful configuration
     event_handlers.append(
         RegisterEventHandler(
             OnStateTransition(
-                target_lifecycle_node=manager_node_lifecycle_node,
+                target_lifecycle_node=payload_transport_node,
                 start_state="configuring",
                 goal_state="inactive",
                 entities=[
                     EmitEvent(
                         event=ChangeState(
                             lifecycle_node_matcher=matches_action(
-                                manager_node_lifecycle_node
+                                payload_transport_node
                             ),
-                            transition_id=lifecycle_msgs.msg.Transition.TRANSITION_ACTIVATE,
+                            transition_id=(
+                                lifecycle_msgs.msg.Transition.
+                                TRANSITION_ACTIVATE
+                            ),
                         )
                     ),
                 ],
             )
-        ),
+        )
     )
 
     ld = LaunchDescription()
 
-    # Declare the arguments
+    # Declare arguments
     for argument in declared_arguments:
         ld.add_action(argument)
 
-    # Add client node
-    ld.add_action(manager_node_lifecycle_node)
+    # Add lifecycle node
+    ld.add_action(payload_transport_node)
 
-    # Add event handlers
+    # Add lifecycle event handlers
     for event_handler in event_handlers:
         ld.add_action(event_handler)
 

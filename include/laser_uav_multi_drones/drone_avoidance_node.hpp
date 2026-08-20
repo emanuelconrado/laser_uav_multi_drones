@@ -1,5 +1,5 @@
-#ifndef MANAGER_NODE_CPP__MANAGER_NODE_HPP
-#define MANAGER_NODE_CPP__MANAGER_NODE_HPP
+#ifndef LASER_UAV_MULTI_DRONES__DRONE_AVOIDANCE_NODE_HPP
+#define LASER_UAV_MULTI_DRONES__DRONE_AVOIDANCE_NODE_HPP
 
 #include <Eigen/Dense>
 #include <laser_msgs/msg/neighbor_odom.hpp>
@@ -9,17 +9,17 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-namespace manager_node_cpp
+namespace laser_uav_multi_drones
 {
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
-class ManagerNode : public rclcpp_lifecycle::LifecycleNode
+class DroneAvoidance : public rclcpp_lifecycle::LifecycleNode
 {
 public:
-  explicit ManagerNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
+  explicit DroneAvoidance(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
-  ~ManagerNode() override;
+  ~DroneAvoidance() override;
 
 private:
   // Lifecycle callbacks.
@@ -42,6 +42,7 @@ private:
 
   // Subscription callbacks.
   void sub_odometry(const nav_msgs::msg::Odometry & message);
+  void sub_payload_odometry(const nav_msgs::msg::Odometry & message);
 
   void sub_neighbor_odometry(
     nav_msgs::msg::Odometry::SharedPtr message, std::size_t neighbor_index);
@@ -49,10 +50,28 @@ private:
   // Timer callbacks.
   void timer_manager_callback();
 
+  // Func
+  void updateGlobalObservation();
+
+  Eigen::Vector3d calculateCableTension(
+    const Eigen::Vector3d & uav_position,
+    const Eigen::Vector3d & uav_velocity,
+    const Eigen::Vector3d & payload_position,
+    const Eigen::Vector3d & payload_velocity);
+
   // UAV state.
+  nav_msgs::msg::Odometry payload_state_;
+  nav_msgs::msg::Odometry payload_state_aux_;
+  
   nav_msgs::msg::Odometry odometry_;
+  nav_msgs::msg::Odometry odometry_aux_;
+  
+  std::vector<nav_msgs::msg::Odometry> neighbors_odom_;
+  std::vector<nav_msgs::msg::Odometry> neighbors_odom_aux_;
+  
   std::vector<laser_msgs::msg::NeighborOdom> neighbors_states_;
   std::vector<laser_msgs::msg::NeighborOdom> neighbors_states_aux_;
+  
   laser_msgs::msg::NeighborOdomArray neighbor_position_velocity_;
 
   // Publishers.
@@ -61,9 +80,10 @@ private:
 
   // Subscriptions.
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odometry_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_payload_odometry_;
 
   std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr>
-    subs_neighbors_position_velocity_;
+  subs_neighbors_position_velocity_;
 
   // Timers.
   rclcpp::TimerBase::SharedPtr timer_manager_;
@@ -73,16 +93,22 @@ private:
   std::vector<std::string> uav_names_;
   std::string this_uav_name_;
   std::string odometry_topic_;
+  std::vector<double> global_observation_;
+
+  double cable_length_;
+  double cable_K_;
+  double cable_D_;
 
   // Synchronization.
   std::mutex neighbors_copy_mutex_;
 
   // Node state.
   bool is_active_{false};
+  bool first_time{true};
   bool is_this_uav_in_neighbors_{false};
   bool first_odometry_received_{false};
 };
 
-}  // namespace manager_node_cpp
+}  // namespace laser uav multi drones
 
-#endif  // MULTI_DRONE_STATE__MANAGER_NODE_HPP_
+#endif  // LASER_UAV_MULTI_DRONES__DRONE_AVOIDANCE_NODE_HPP
