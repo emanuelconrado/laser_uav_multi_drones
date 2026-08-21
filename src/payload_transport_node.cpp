@@ -163,6 +163,7 @@ void PayloadTransport::configure_publishers_and_subscriptions()
     create_subscription<nav_msgs::msg::Odometry>(
     "odometry_payload_in", 1,
     std::bind(&PayloadTransport::sub_payload_odometry, this, std::placeholders::_1));
+
 }
 //}
 
@@ -360,8 +361,8 @@ void PayloadTransport::updateGlobalObservation()
   const std::size_t payload_angle_offset =
     target_velocity_offset + kTargetVelocitySize;
 
-  global_observation_[payload_angle_offset + 0] = theta_x;
-  global_observation_[payload_angle_offset + 1] = theta_y;
+  global_observation_[payload_angle_offset + 0] = theta_x / pi;
+  global_observation_[payload_angle_offset + 1] = theta_y / pi;
 
   // Total cable tension
   Eigen::Vector3d total_tension_vector =
@@ -402,20 +403,20 @@ void PayloadTransport::updateGlobalObservation()
   }
 
   const double total_tension =
-    total_tension_vector.norm() / 10.0;
+    total_tension_vector.norm();
 
   const double wind_strength = 0.0;
-  const double time_stamp = now().seconds() / 10.0;
+  const double time_stamp = now().seconds();
 
   const std::size_t additional_state_offset =
     payload_angle_offset + kPayloadAngleSize;
 
   global_observation_[additional_state_offset + 0] =
-    total_tension;
+    total_tension / 20.0;
   global_observation_[additional_state_offset + 1] =
     wind_strength;
   global_observation_[additional_state_offset + 2] =
-    time_stamp;
+    time_stamp / 10.0;
 
 }
 //}

@@ -77,7 +77,7 @@ private:
 
   std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr>
   subs_neighbors_position_velocity_;
-  
+
   // Timers.
   rclcpp::TimerBase::SharedPtr timer_manager_;
 
@@ -91,6 +91,8 @@ private:
   double cable_length_;
   double cable_K_;
   double cable_D_;
+
+  double pi{3.14159265359};
 
   // Synchronization.
   std::mutex neighbors_copy_mutex_;

@@ -74,10 +74,6 @@ def generate_launch_description():
                 "odometry_in",
                 "/" + uav_name + "/ground_truth",
             ),
-            (
-                "odometry_payload_in",
-                "/payload/ground_truth",
-            ),
         ],
     )
 
