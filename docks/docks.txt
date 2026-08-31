@@ -1,0 +1,15 @@
+
+#Pytorch CPU-only
+
+python3 -m venv \
+  /home/conrado/venvs/torch_ros_cpu
+
+source \
+  /home/conrado/venvs/torch_ros_cpu/bin/activate
+
+python -m pip install \
+  --upgrade pip
+
+python -m pip install \
+  torch==2.8.0 \
+  --index-url https://download.pytorch.org/whl/cpu

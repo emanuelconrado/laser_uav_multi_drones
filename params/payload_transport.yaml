@@ -4,6 +4,8 @@
     topic_odom: "ground_truth" #all uav odom have to be in the same frame_id 
     rate:
       timer_manager: 7.0
+    model:
+      path: ../models/unified_centralized_2uav_best_actor_torchscript.pt
     cable:
       K: 200.0 # [N/m]
       D: 60.0 # [Ns/m]
